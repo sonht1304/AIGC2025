@@ -1,0 +1,59 @@
+#include <DHTesp.h>
+#include "ThingSpeak.h"
+#include <WiFi.h>
+
+#define gas_pin 2
+#define dht_pin 16
+
+DHTesp dhtSensor;
+const char* ssid = "tsdt";
+const char* pass = "xinphepanhsona";
+const char* myAPI = "QNX24DU7GNXF6093";
+unsigned long ChannelNumber = 3154092;
+WiFiClient client;
+
+void connectWifi() {
+
+  Serial.print("Connecting Wifi");
+
+  WiFi.begin(ssid, pass);
+  while (WiFi.status() != WL_CONNECTED)
+    Serial.print(".");
+
+  Serial.print("\nConnected!");
+  WiFi.mode(WIFI_STA);
+  ThingSpeak.begin(client);
+
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(gas_pin, INPUT);
+  dhtSensor.setup(dht_pin, DHTesp::DHT11);
+  connectWifi();
+}
+
+void loop() {
+  TempAndHumidity  data = dhtSensor.getTempAndHumidity(); // Read temperature and humidity from the DHT22 sensor
+  int gas = analogRead(gas_pin);
+
+  ThingSpeak.setField(1, data.temperature);
+  ThingSpeak.setField(2, data.humidity);
+  ThingSpeak.setField(3, gas);
+  int x = ThingSpeak.writeFields(ChannelNumber, myAPI);
+  if(x == 200) {
+    Serial.println("Channel update successful.");
+  }
+  else {
+    Serial.println("Problem updating channel. HTTP error code " + String(x));
+  }
+
+  Serial.println("Temp: " + String(data.temperature, 2) + "°C"); // Print the temperature value with 2 decimal places
+  Serial.println("Humidity: " + String(data.humidity, 1) + "%"); // Print the humidity value with 1 decimal place
+  Serial.println(String(gas));
+  Serial.println("--------------------");
+
+  delay(20000);
+  
+}
